@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Script from 'next/script'; // 외부 광고 자바스크립트를 안전하게 로드하기 위한 Next.js 내장 컴포넌트
 import { useGameStore } from '@/lib/store';
 import { initSoundEngine, playSound } from '@/lib/utils';
 import { FloatingText, FloatingMessage } from '@/components/game/FloatingText';
@@ -33,7 +32,19 @@ export default function GamePage() {
   useEffect(() => {
     setIsMounted(true);
     initSoundEngine('/assets/sounds/pluck.mp3');
-  }, []);
+
+    // 📺 [수정 포인트]: DOM이 완전히 렌더링된 후 일릭스 스크립트를 동적으로 주입하여 실행 순서 보장
+    if (!isPremium) {
+      const script = document.createElement('script');
+      script.src = '//data527.click/js/responsive.js';
+      script.async = true;
+      document.body.appendChild(script);
+
+      return () => {
+        document.body.removeChild(script);
+      };
+    }
+  }, [isPremium]);
 
   const getRandomScript = (currentCount: number): string => {
     const count = Math.max(1, Math.min(100000, currentCount));
@@ -97,7 +108,6 @@ export default function GamePage() {
   }
 
   return (
-    // 하단 광고 배너 영역이 본문을 가리지 않도록 전체 화면 밑단 패딩(pb-24) 확보
     <div className="flex flex-col items-center justify-center min-h-screen bg-stone-100 dark:bg-black text-stone-900 dark:text-stone-200 p-4 pb-24 select-none overflow-hidden font-mono transition-colors duration-300">
       <style dangerouslySetInnerHTML={{__html: `
         @keyframes hammer-impact {
@@ -144,7 +154,7 @@ export default function GamePage() {
           YLLIX LIVE DEPLOYMENT v10.0
         </p>
 
-        {/* 잔여 모발 전광판 */}
+        {/* 전광판 */}
         <div className={`bg-white dark:bg-stone-900 p-4 rounded-md mb-8 text-center border-2 border-stone-300 dark:border-stone-800 min-w-[290px] shadow-[0_10px_25px_rgba(0,0,0,0.08)] dark:shadow-[0_15px_30px_rgba(0,0,0,0.7)] transition-all ${
           isShaking ? 'border-orange-500 dark:border-orange-900 bg-orange-50/10' : ''
         }`}>
@@ -154,7 +164,7 @@ export default function GamePage() {
           </p>
         </div>
 
-        {/* 캐릭터 영역 카드 */}
+        {/* 캐릭터 구역 */}
         <div className="relative mb-8 flex items-center justify-center w-64 h-64">
           <div
             onPointerDown={handleUltimateAction}
@@ -208,7 +218,7 @@ export default function GamePage() {
               </defs>
             </svg>
 
-            {/* 검은 머리카락 낙하 이펙트 */}
+            {/* 머리카락 흩날림 레이어 */}
             <div className="absolute inset-0 pointer-events-none z-30 overflow-hidden">
               {fallingHairs.map((hair) => (
                 <div
@@ -238,14 +248,12 @@ export default function GamePage() {
         </div>
       </div>
 
-      {/* 📺 하단 고정형 일릭스(Advertica) 실제 라이브 광고 슬롯 */}
+      {/* 📺 하단 고정형 일릭스 배너 슬롯 */}
       {!isPremium && (
         <div className="fixed bottom-0 left-0 right-0 w-full bg-stone-200 dark:bg-stone-900 border-t border-stone-300 dark:border-stone-800 flex items-center justify-center py-2 px-4 z-40 shadow-[0_-4px_15px_rgba(0,0,0,0.1)] transition-colors duration-300">
-          
-          {/* 일릭스 468x60 물리 규격 안착 슬롯 */}
-          <div className="w-full max-w-[468px] min-h-[60px] bg-white dark:bg-stone-950 border border-stone-300 dark:border-stone-800 flex items-center justify-center relative rounded overflow-hidden">
+          <div className="w-full max-w-[468px] min-h-[60px] flex items-center justify-center relative rounded overflow-hidden">
             
-            {/* 제공해주신 일릭스 순정 <ins> 태그 완벽 맵핑 */}
+            {/* 📍 순정 일릭스 <ins> 구조 유지 */}
             <ins 
               style={{ width: '468px', height: '60px', display: 'block' }} 
               data-width="468" 
@@ -253,13 +261,7 @@ export default function GamePage() {
               className="v31d7ba9970" 
               data-domain="//data527.click" 
               data-affquery="/eb7604155d5ba888dd42/31d7ba9970/?placementName=hairgame_bottom_banner"
-            >
-              {/* 일릭스 자바스크립트 모듈을 Next.js Script 컴포넌트로 비동기 가동 */}
-              <Script 
-                src="//data527.click/js/responsive.js" 
-                strategy="afterInteractive" 
-              />
-            </ins>
+            />
 
           </div>
         </div>
