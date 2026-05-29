@@ -25,18 +25,42 @@ export default function GamePage() {
   // 📍 스토어에서 resetGame을 정상적으로 가져옵니다.
   const { hairCount, depilate, increaseHair, isPremium, resetGame } = useGameStore();
 
-  useEffect(() => {
+ useEffect(() => {
     setIsMounted(true);
     initSoundEngine('/assets/sounds/pluck.mp3');
 
+    // 🔄 [2단계 추가]: 오프라인 자동 차오르기 로직
+    // 스토어에서 마지막 저장 시간(lastSavedTime)과 현재 수량을 꺼내옵니다.
+    const state = useGameStore.getState();
+    
+    // 안전장치: 모근이 완전히 0가닥(엔딩)일 때는 나갔다 와도 자동으로 차지 않게 방어하고, 0보다 크고 최대치(110)보다 작을 때만 계산합니다.
+    if (state.hairCount > 0 && state.hairCount < 110 && state.lastSavedTime) {
+      const now = Date.now();
+      const gapInSeconds = Math.floor((now - state.lastSavedTime) / 1000); // 흘러간 공백 시간(초)
+
+      if (gapInSeconds > 0) {
+        // 공백 시간(초)만큼 수량을 더하되, 최대치인 110을 넘지 않도록 제어합니다.
+        const nextCount = Math.min(110, state.hairCount + gapInSeconds);
+        
+        // 새로고침 없이 Zustand 스토어의 값을 즉시 강제 업데이트합니다.
+        useGameStore.setState({ 
+          hairCount: nextCount,
+          lastSavedTime: now 
+        });
+      }
+    }
+
+    // 📍 원래 있던 인게임 실시간 1초 타이머 구역
     const autoIncreaseTimer = setInterval(() => {
-      if (increaseHair && hairCount > 0 && hairCount < 110) {
+      // 컴포넌트 내부에서 최신 상태를 읽기 위해 useGameStore.getState()로 검사합니다.
+      const currentHair = useGameStore.getState().hairCount;
+      if (increaseHair && currentHair > 0 && currentHair < 110) {
         increaseHair(); 
       }
     }, 1000);
 
     return () => clearInterval(autoIncreaseTimer);
-  }, [hairCount, increaseHair]);
+  }, [increaseHair]);
 
   const handleUltimateAction = (): void => {
     if (hairCount === 0) return; 
