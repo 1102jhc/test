@@ -1,3 +1,33 @@
+import { TALK_SCRIPTS } from '@/lib/constants';
+
+export interface TalkScriptRange {
+  min: number;
+  max: number;
+  lines: string[];
+}
+
+export const getRandomScript = (currentCount: number): string => {
+  // 0~10만 가닥 사이로 안전하게 가둡니다.
+  const count = Math.max(0, Math.min(100000, currentCount));
+
+  // 📍 [여기서부터 딱 3줄만 새로 추가하세요!]
+  if (count === 0) {
+    return "다 뽑으니까 속이 후련하냐? 내 머리도, 네 미래도 아주 투명하네ㅋ";
+  }
+  // 📍 [여기까지]
+
+  const matchedRange = (TALK_SCRIPTS as TalkScriptRange[]).find(
+    (range) => count >= range.min && count <= range.max
+  );
+  
+  if (!matchedRange) return "어허, 손 치워라.";
+  
+  const randomIndex = Math.floor(Math.random() * matchedRange.lines.length);
+  return matchedRange.lines[randomIndex];
+};
+
+
+
 // 전역 메모리에 오디오 상태를 보존하기 위한 필수 선언 (여기서 에러가 났던 거야!)
 let audioCtx: AudioContext | null = null;
 let soundBuffer: AudioBuffer | null = null;
