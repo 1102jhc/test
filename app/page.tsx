@@ -34,15 +34,15 @@ export default function GamePage() {
     
     // ✨ [추가]: 진입 트랩 - 만약 들고 온 데이터가 완전히 '0개'인 엔딩 상태라면?
     if (state.hairCount === 0) {
-      resetGame(); // 새로고침 없이 즉시 Zustand 스토어와 로컬 스토리지를 110개로 공장초기화!
+      resetGame(); // 새로고침 없이 즉시 Zustand 스토어와 로컬 스토리지를 100000개로 공장초기화!
     } 
     // 📍 원래 있던 오프라인 자동 차오르기 로직 (0개가 아닐 때만 작동하도록 else if로 연결)
-    else if (state.hairCount > 0 && state.hairCount < 110 && state.lastSavedTime) {
+    else if (state.hairCount > 0 && state.hairCount < 100000 && state.lastSavedTime) {
       const now = Date.now();
       const gapInSeconds = Math.floor((now - state.lastSavedTime) / 1000);
 
       if (gapInSeconds > 0) {
-        const nextCount = Math.min(110, state.hairCount + gapInSeconds);
+        const nextCount = Math.min(100000, state.hairCount + gapInSeconds);
         useGameStore.setState({ 
           hairCount: nextCount,
           lastSavedTime: now 
@@ -53,7 +53,7 @@ export default function GamePage() {
     // 📍 원래 있던 인게임 실시간 1초 타이머 구역
     const autoIncreaseTimer = setInterval(() => {
       const currentHair = useGameStore.getState().hairCount;
-      if (increaseHair && currentHair > 0 && currentHair < 110) {
+      if (increaseHair && currentHair > 0 && currentHair < 100000) {
         increaseHair(); 
       }
     }, 1000);
@@ -102,7 +102,7 @@ export default function GamePage() {
       x: 50 + Math.random() * 150,
       y: 25 + Math.random() * 30,
       angle: (Math.random() - 0.5) * 360, 
-      driftX: (Math.random() - 0.5) * 110,
+      driftX: (Math.random() - 0.5) * 100000,
       curveDir: Math.random() > 0.5 ? 1 : -1
     };
 
@@ -112,7 +112,7 @@ export default function GamePage() {
     }, 1600);
   };
 
-  const hairPercentage = (hairCount / 110) * 100;
+  const hairPercentage = (hairCount / 100000) * 100;
 
   if (!isMounted) {
     return <div className="text-stone-800 dark:text-white text-center pt-20 bg-stone-100 dark:bg-stone-950 min-h-screen font-mono">철제 프레임 동기화 중...</div>;

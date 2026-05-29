@@ -16,7 +16,7 @@ interface GameState {
 export const useGameStore = create<GameState>()(
   persist(
     (set) => ({
-      hairCount: 110,
+      hairCount: 100000,
       isPremium: false,
       lastSavedTime: Date.now(), // 초기값 설정
 
@@ -30,7 +30,7 @@ export const useGameStore = create<GameState>()(
       // 머리카락 자동 부활 로직 (시간 갱신 포함)
       increaseHair: () =>
         set((state) => ({
-          hairCount: state.hairCount < 110 ? state.hairCount + 1 : 110,
+          hairCount: state.hairCount < 100000 ? state.hairCount + 1 : 100000,
           lastSavedTime: Date.now(),
         })),
 
@@ -40,16 +40,17 @@ export const useGameStore = create<GameState>()(
           isPremium: true,
         })),
 
-      // 게임 공장 초기화 (110 가닥 싱크 맞춤)
+      // 게임 공장 초기화 (100000 가닥 싱크 맞춤)
       resetGame: () =>
         set(() => ({
-          hairCount: 110, 
+          hairCount: 100000, 
           isPremium: false,
           lastSavedTime: Date.now(),
         })),
     }),
     {
       name: 'pluck-hair-game-storage',
+      version: 1,
     }
   )
 );
