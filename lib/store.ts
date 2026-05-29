@@ -12,7 +12,7 @@ interface GameState {
   resetGame: () => void;   // 게임 초기화 함수
 }
 
-// 2. Zustand 스토어 생성 (꼬여있던 괄호 및 타입 선언 교정)
+// 2. Zustand 스토어 생성
 export const useGameStore = create<GameState>()(
   persist(
     (set) => ({
@@ -50,7 +50,10 @@ export const useGameStore = create<GameState>()(
     }),
     {
       name: 'pluck-hair-game-storage',
-      version: 1,
+      version: 2,
+      migrate: (_persistedState, _version) => {
+        return {} as GameState; 
+      }
     }
   )
 );

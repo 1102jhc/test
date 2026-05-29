@@ -1,42 +1,33 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, CSSProperties } from 'react';
 import { useGameStore } from '@/lib/store';
-import { initSoundEngine, playSound, getRandomScript } from '@/lib/utils';
-import { FloatingMessage } from '@/components/game/FloatingText';
 import { WigAvatar } from '@/components/game/WigAvatar';
 import { GameFooter } from '@/components/game/GameFooter';
+import { useHairManager } from '@/hooks/useHairManager'; // 👈 분리한 커스텀 훅 임포트
 
-interface FallingHair {
-  id: string;
-  x: number;
-  y: number;
-  angle: number;
-  driftX: number;
-  curveDir: number;
+interface HairCustomProperties extends CSSProperties {
+  '--init-deg'?: string;
+  '--spin-deg'?: string;
+  '--drift-x'?: string;
 }
 
 export default function GamePage() {
   const [isMounted, setIsMounted] = useState<boolean>(false);
-  const [messages, setMessages] = useState<FloatingMessage[]>([]);
-  const [isShaking, setIsShaking] = useState<boolean>(false);
-  const [fallingHairs, setFallingHairs] = useState<FallingHair[]>([]);
   
-  // 📍 스토어에서 resetGame을 정상적으로 가져옵니다.
-  const { hairCount, depilate, increaseHair, isPremium, resetGame } = useGameStore();
+  const { hairCount, increaseHair, isPremium, resetGame } = useGameStore();
+  
+  // 🔄 리팩토링 핵심: 무거운 상태와 머리카락 생성 기능을 훅으로 완전 분리 추출
+  const { messages, isShaking, fallingHairs, handleUltimateAction } = useHairManager();
 
- useEffect(() => {
+  useEffect(() => {
     setIsMounted(true);
-    initSoundEngine('/assets/sounds/pluck.mp3');
 
-    // 스토어에서 현재 상태를 다이렉트로 읽어옵니다.
     const state = useGameStore.getState();
     
-    // ✨ [추가]: 진입 트랩 - 만약 들고 온 데이터가 완전히 '0개'인 엔딩 상태라면?
     if (state.hairCount === 0) {
-      resetGame(); // 새로고침 없이 즉시 Zustand 스토어와 로컬 스토리지를 100000개로 공장초기화!
+      resetGame(); 
     } 
-    // 📍 원래 있던 오프라인 자동 차오르기 로직 (0개가 아닐 때만 작동하도록 else if로 연결)
     else if (state.hairCount > 0 && state.hairCount < 100000 && state.lastSavedTime) {
       const now = Date.now();
       const gapInSeconds = Math.floor((now - state.lastSavedTime) / 1000);
@@ -50,7 +41,6 @@ export default function GamePage() {
       }
     }
 
-    // 📍 원래 있던 인게임 실시간 1초 타이머 구역
     const autoIncreaseTimer = setInterval(() => {
       const currentHair = useGameStore.getState().hairCount;
       if (increaseHair && currentHair > 0 && currentHair < 100000) {
@@ -61,57 +51,6 @@ export default function GamePage() {
     return () => clearInterval(autoIncreaseTimer);
   }, [increaseHair, resetGame]);
 
-  const handleUltimateAction = (): void => {
-    if (hairCount === 0) return; 
-
-    try {
-      playSound('/assets/sounds/pluck.mp3');
-    } catch (e) {
-      console.log("오디오 재생 대기");
-    }
-
-    setIsShaking(true);
-    setTimeout(() => setIsShaking(false), 100);
-
-    const currentNextCount = hairCount - 1; 
-    depilate(); 
-
-    const uniqueStringId = `${Date.now()}-${Math.random()}`;
-    const isLeft = hairCount % 2 === 0;
-    const spreadDistance = 40 + Math.random() * 60;
-    const finalX = isLeft ? -(spreadDistance + 50) : spreadDistance - 10;    
-    const finalY = 50 + Math.random() * 20;
-
-    const newMsg: FloatingMessage = {
-      id: uniqueStringId,
-      text: getRandomScript(currentNextCount), 
-      x: finalX, 
-      y: finalY, 
-      delay: Math.random() * 0.05
-    };
-
-    setMessages((prev) => [...prev, newMsg]);
-       
-    setTimeout(() => {
-      setMessages((prev) => prev.filter((m) => m.id !== uniqueStringId));
-    }, 2200);
-
-    const hairId = `hair-${Date.now()}-${Math.random()}`;
-    const newHair: FallingHair = {
-      id: hairId,
-      x: 50 + Math.random() * 150,
-      y: 25 + Math.random() * 30,
-      angle: (Math.random() - 0.5) * 360, 
-      driftX: (Math.random() - 0.5) * 100000,
-      curveDir: Math.random() > 0.5 ? 1 : -1
-    };
-
-    setFallingHairs((prev) => [...prev, newHair]);
-    setTimeout(() => {
-      setFallingHairs((prev) => prev.filter((h) => h.id !== hairId));
-    }, 1600);
-  };
-
   const hairPercentage = (hairCount / 100000) * 100;
 
   if (!isMounted) {
@@ -119,7 +58,7 @@ export default function GamePage() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-stone-100 dark:bg-black text-stone-900 dark:text-stone-200 p-4 pb-24 select-none overflow-hidden font-mono transition-colors duration-300">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-stone-100 dark:bg-black text-stone-900 dark:text-stone-200 p-4 pb-24 select-none overflow-x-hidden font-mono transition-colors duration-300">
       <style dangerouslySetInnerHTML={{__html: `
         @keyframes hammer-impact {
           0% { transform: translate(0, 0) scale(1) rotate(0deg); }
@@ -130,6 +69,16 @@ export default function GamePage() {
         }
         .impact-active {
           animation: hammer-impact 0.1s cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
+        }
+
+        /* 살랑살랑 끊김 없이 바닥까지 떨어지는 리얼 낙하 공식 */
+        @keyframes fixed-parabolic-fall {
+          0% { opacity: 1; transform: translateY(0) scaleY(1) rotate(0deg); }
+          8% { transform: translateY(-15px) scaleY(1.03) rotate(calc(var(--init-deg) * 0.15)); opacity: 1; }
+          100% { transform: translateY(85vh) translateX(var(--drift-x)) rotate(calc(var(--init-deg) + var(--spin-deg))) scaleY(0.9); opacity: 0; }
+        }
+        .animate-fixed-hair-fall { 
+          animation: fixed-parabolic-fall 3.8s cubic-bezier(0.25, 1, 0.5, 1) forwards; 
         }
       `}} />
 
@@ -153,13 +102,12 @@ export default function GamePage() {
         <WigAvatar 
           hairCount={hairCount}
           hairPercentage={hairPercentage}
-          fallingHairs={fallingHairs}
           handleUltimateAction={handleUltimateAction}
           messages={messages}
           resetGame={resetGame}
         />
         
-        {/* 🔄 hairCount === 0일 때 하단 레이아웃에 정석 다시하기 버튼 배치 */}
+        {/* 다시하기 버튼 배치 */}
         {hairCount === 0 && (
           <div className="w-full flex flex-col items-center gap-3 mt-4">
             <div className="text-center px-4 py-2 bg-white dark:bg-stone-900 border-2 border-orange-500 rounded-md shadow-md animate-pulse w-full">
@@ -178,7 +126,30 @@ export default function GamePage() {
         )}
       </div>
 
-      {/* 하단 광고판 조립 */}
+      {/* 최상위 fixed 머리카락 렌더링 구역 */}
+      <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
+        {fallingHairs.map((hair) => {
+          const spinDegrees = hair.curveDir * (180 + Math.random() * 180);
+          const hairInlineStyle: HairCustomProperties = {
+            left: `${hair.x}vw`, 
+            top: `${hair.y}vh`,  
+            width: '14px',
+            height: '22px',
+            '--init-deg': `${hair.angle}deg`,
+            '--spin-deg': `${spinDegrees}deg`, 
+            '--drift-x': `${hair.driftX}px`
+          };
+
+          return (
+            <div key={hair.id} className="absolute animate-fixed-hair-fall pointer-events-none" style={hairInlineStyle}>
+              <svg viewBox="0 0 100 100" className="w-full h-full">
+                <path d={hair.curveDir > 0 ? "M 30 0 Q 80 30, 20 60 T 50 100" : "M 70 0 Q 20 30, 80 60 T 50 100"} fill="none" stroke="currentColor" className="stroke-stone-900 dark:stroke-stone-200" strokeWidth="6" strokeLinecap="round" />
+              </svg>
+            </div>
+          );
+        })}
+      </div>
+
       <GameFooter isPremium={isPremium} />
     </div>
   );
